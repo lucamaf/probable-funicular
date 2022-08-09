@@ -1,4 +1,4 @@
-FROM ghcr.io/graalvm/graalvm-ce:ol7-java11-21.3.3@sha256:ea8176d5185642c6e34063eac2d1c0edb5dcdff8f678028db14b0dad960ee0b5 AS build
+FROM ghcr.io/graalvm/graalvm-ce:ol7-java11-21.3.3 AS build
 RUN gu install native-image
 WORKDIR /project
 VOLUME ["/project"]
