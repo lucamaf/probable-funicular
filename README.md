@@ -1,4 +1,4 @@
-# code-with-quarkus Project
+# Edge Open Demo Project
 
 This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
