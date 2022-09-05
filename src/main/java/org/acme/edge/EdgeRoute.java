@@ -19,7 +19,7 @@ package org.acme.edge;
 import javax.enterprise.context.ApplicationScoped;
 
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.component.couchdb.CouchDbConstants;
+//import org.apache.camel.component.couchdb.CouchDbConstants;
 import org.apache.camel.component.infinispan.InfinispanConstants;
 import org.apache.camel.component.infinispan.InfinispanOperation;
 import org.apache.camel.component.jackson.JacksonDataFormat;
