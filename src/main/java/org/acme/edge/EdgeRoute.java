@@ -20,6 +20,8 @@ import javax.enterprise.context.ApplicationScoped;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.couchdb.CouchDbConstants;
+import org.apache.camel.component.infinispan.InfinispanConstants;
+import org.apache.camel.component.infinispan.InfinispanOperation;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -31,112 +33,129 @@ public class EdgeRoute extends RouteBuilder {
     JacksonDataFormat jsonDataFormat = new JacksonDataFormat(Msg.class);
     private long old_time=System.currentTimeMillis();
     private int old_counter=0;
-    private String time_key="";
-    private String counter_key="";
-    private String time_rev="";
-    private String counter_rev="";
+    private String time_key="time";
+    private String counter_key="counter";
+    private String total_key= "hour";
+    private String time_value="";
+    private String counter_value="";
+    private int total_value=0;
 
     @ConfigProperty(name = "time.range") 
     long timerange;
 
+        // when temperature out of range and humidity as well
+        // store JMSTimestamp, temp and humidity values in infinispan under predefined keys 
+        // if new timestamp is greater than current timestamp by a period reset timestamp and reset to one the counter
+        // otherwise increment one the key
+        // when counter reaches limit send an alert to email address (if connection fails retry)
+        // when the counter reached double the amount perform a geo query on redis and trigger the alert on telegram to deliver the good
     @Override
     public void configure() throws Exception {
+        // get last saved time value
+        from("timer://runOnce?repeatCount=1")
+            .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
+            .setHeader(InfinispanConstants.KEY).constant(time_key)
+            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_time)
+            .to("infinispan://mycache?hosts=infinispan&username=admin&password=password")
+            .process(exchange -> {
+                time_value =  (String) exchange.getMessage().getBody();
+            });
+
+        // get the long running timer
+        from("timer://runOnce?repeatCount=1")
+            .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
+            .setHeader(InfinispanConstants.KEY).constant("old_time")
+            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_time)
+            .to("infinispan://mycache?hosts=infinispan&username=admin&password=password")
+            .process(exchange -> {
+                old_time =  (Long) exchange.getMessage().getBody();
+            });    
+
+        // get the long running counter
+        from("timer://runOnce?repeatCount=1")
+            .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
+            .setHeader(InfinispanConstants.KEY).constant("old_counter")
+            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_counter)
+            .to("infinispan://mycache?hosts=infinispan&username=admin&password=password")
+            .process(exchange -> {
+                old_counter =  (Integer) exchange.getMessage().getBody();
+            });
+
+        // get last saved counter value
+        from("timer://runOnce?repeatCount=1")
+            .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
+            .setHeader(InfinispanConstants.KEY).constant(counter_key)
+            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_counter)
+            .to("infinispan://mycache?hosts=infinispan&username=admin&password=password")
+            .process(exchange -> {
+                counter_value =  (String) exchange.getMessage().getBody();
+            });
+
+        // check for temperature or humidity limits
         from("jms:{{jms.destinationType}}:{{jms.destinationName}}")
             .routeId("amq2filter")
             .log("message: ${body}")
             .unmarshal(jsonDataFormat)
-        // when temperature out of range
-        // store JMSTimestamp in redis under a key 
-        // if new timestamp is greater than current timestamp by a time reset timestamp and reset to one a key
-        // otherwise increment one the key
-        // when counter reaches 5 send an alert to web trap
             .choice()
-                .when(simple("${body.temperature} > {{temp.limit}}"))
+                .when(simple("${body.temperature} > {{temp.limit}} || ${body.humidity} > {{humid.limit}}"))
                     .to("direct:alert");
 
+        // process the event to update time and counter at the same time
+        //TODO remove multi, save payload in exchange property
         from("direct:alert")
             .routeId("filter2multicast")
             .multicast()
                 .to("direct:time","direct:counter");
 
+        // processing time updates
         from("direct:time")
-            .routeId("multi2couch-time")
+            .routeId("infinispan-time")
             .process(exchange -> {
-            long t = (long) exchange.getMessage().getHeader("JMSTimestamp");
-            if(!time_key.isEmpty()){
-                exchange.getMessage().setHeader(CouchDbConstants.HEADER_DOC_ID, time_key);
-                exchange.getMessage().setHeader(CouchDbConstants.HEADER_DOC_REV, time_rev);
-            }
-            if(t-old_time >  timerange){
-                if(time_key.isEmpty()){
-                    exchange.getMessage().setBody("{'time':"+t+"}", JsonObject.class);
-                }else{
-                    exchange.getMessage().setBody("{'time':"+t+",'_id':'"+time_key+"','_rev':'"+time_rev+"'}", JsonObject.class);
-                }
-                old_counter=0;
-                old_time=t;
-            }else{
-                if(time_key.isEmpty()){
-                    exchange.getMessage().setBody("{'time':"+t+"}", JsonObject.class);
-                }else{
-                    exchange.getMessage().setBody("{'time':"+t+",'_id':'"+time_key+"','_rev':'"+time_rev+"'}", JsonObject.class);
-                }
-            }
+                long t = (long) exchange.getMessage().getHeader("JMSTimestamp");
             
-        })
-        .to("couchdb:http://{{camel.couchdb}}/database?createDatabase=true&username=admin&password=password")
-        .process(exchange -> {
-            time_key = (String) exchange.getMessage().getHeader(CouchDbConstants.HEADER_DOC_ID);
-            time_rev = (String) exchange.getMessage().getHeader(CouchDbConstants.HEADER_DOC_REV);
-        });
+                if(t - Long.parseLong(time_value) >  timerange){
+                    old_counter=0;
+                    old_time=t;
+                }
+                exchange.getMessage().setBody(t);
+            })
+            .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.PUT)
+            .setHeader(InfinispanConstants.KEY).constant(time_key)
+            .setHeader(InfinispanConstants.VALUE).body()
+            .to("infinispan://mycache?hosts=infinispan&username=admin&password=password");
 
+        // processing counter updates (long and short running)
         from("direct:counter")
-        .routeId("multi2couch-counter")
+        .routeId("infinispan-counter")
         .process(exchange -> {
-            if(!counter_key.isEmpty()){
-                exchange.getMessage().setHeader(CouchDbConstants.HEADER_DOC_ID, counter_key);
-                exchange.getMessage().setHeader(CouchDbConstants.HEADER_DOC_REV, counter_rev);
-            }
-            if(old_counter==0){
-                if(counter_key.isEmpty()){
-                    exchange.getMessage().setBody("{'counter':1}", JsonObject.class);
-                }else{
-                    exchange.getMessage().setBody("{'counter':1,'_id':'"+counter_key+"','_rev':'"+counter_rev+"'}", JsonObject.class);
-                }
-                old_counter=1;    
-            }else{
-                old_counter += 1;
-                if(counter_key.isEmpty()){
-                    exchange.getMessage().setBody("{'counter':"+old_counter+"}", JsonObject.class);
-                }else{
-                    exchange.getMessage().setBody("{'counter':"+old_counter+",'_id':'"+counter_key+"','_rev':'"+counter_rev+"'}", JsonObject.class);
-                }
-            }
+            
+            old_counter += 1;
+            counter_value += 1;
+            exchange.getMessage().setBody(old_counter);
         })
-        .to("couchdb:http://{{camel.couchdb}}/database?createDatabase=true&username=admin&password=password")
-        .process(exchange -> {
-            counter_key = (String) exchange.getMessage().getHeader(CouchDbConstants.HEADER_DOC_ID);
-            counter_rev = (String) exchange.getMessage().getHeader(CouchDbConstants.HEADER_DOC_REV);
-        })
+        .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.PUT)
+        .setHeader(InfinispanConstants.KEY).constant(time_key)
+        .setHeader(InfinispanConstants.VALUE).body()
+        .to("infinispan://mycache?hosts=infinispan&username=admin&password=password")
         .to("direct:check");
 
+        // get counter value from infinispan
         from("direct:check")
         .routeId("checkLimit")
-        .process(exchange -> {
-            exchange.getMessage().setHeader(CouchDbConstants.HEADER_METHOD, constant("get"));
-            exchange.getMessage().setHeader(CouchDbConstants.HEADER_DOC_ID, constant(counter_key));
-
-        })
-        .to("couchdb:http://{{camel.couchdb}}/database?createDatabase=true&username=admin&password=password")
+        .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
+            .setHeader(InfinispanConstants.KEY).constant("old_counter")
+            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_counter)
+            .to("infinispan://mycache?hosts=infinispan&username=admin&password=password")
+        
         //.marshal().json()
-        .process(exchange -> {
+        //.process(exchange -> {
             //JsonObject json = (JsonObject) JsonParser.parseString(exchange.getMessage().getBody().toString());
             //exchange.getMessage().setBody(json);
             //exchange.getMessage().setHeader("counter", json.get("counter"));
-            String s = exchange.getMessage().getBody().toString();
-            s = s.replaceAll("\'", "\"");
-            exchange.getMessage().setBody(s);
-        })
+            //String s = exchange.getMessage().getBody().toString();
+            //s = s.replaceAll("\'", "\"");
+            //exchange.getMessage().setBody(s);
+        //})
 
         //.marshal().json()
         .choice()
