@@ -1,19 +1,19 @@
 # Edge Open Demo Project
 
 ## Edge Gateway (based on RHEL with Microshift preinstalled)
-To use the prebuilt image, create a VM using the provided ISO as installation disk found [here](ftp://ftpuser@65.21.88.32/aaf08b97-d2fd-4ba4-8729-048c24edd7e3-installer.iso)
-As operating system select RHEL8.6, create a VM with the disk image as the ISO and make sure to select EUFI as boot loader, provide at least 4GB of RAM, choose automatic partioning
-Username and password of are admin:password
+To use the prebuilt image, create a VM using the provided ISO as installation disk found [here](ftp://ftpuser@65.21.88.32/aaf08b97-d2fd-4ba4-8729-048c24edd7e3-installer.iso)  
+As operating system select RHEL8.6, create a VM with the disk image as the ISO and make sure to select EUFI as boot loader, provide at least 4GB of RAM and choose automatic partioning  
+Username and password of are *admin:password*  
 After the installation Microshift should be running already, you can check with:
 ```
 systemctl status microshift
 ```
-You would need to install oc or kubectl to access the cluster
+You would need to install oc or kubectl to access the cluster:  
 ```
 curl -O https://mirror.openshift.com/pub/openshift-v4/$(uname -m)/clients/ocp/stable/openshift-client-linux.tar.gz
 sudo tar -xf openshift-client-linux.tar.gz -C /usr/local/bin oc kubectl
 ```
-and copy the kubeconfig file
+and copy the kubeconfig file:  
 ```
 mkdir ~/.kube
 sudo cat /var/lib/microshift/resources/kubeadmin/kubeconfig > ~/.kube/config
