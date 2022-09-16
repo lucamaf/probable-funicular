@@ -1,5 +1,10 @@
 # Edge Open Demo Project
 
+## Edge Gateway (based on RHEL with Microshift preinstalled)
+To use the prebuilt image, create a VM using the provided ISO [here]()
+As operating system select RHEL8.6
+Provide at least 4GB of RAM
+Username and password are
 This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
 If you want to learn more about Quarkus, please visit its website: https://quarkus.io/ .
