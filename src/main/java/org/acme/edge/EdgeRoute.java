@@ -56,7 +56,7 @@ public class EdgeRoute extends RouteBuilder {
             .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
             .setHeader(InfinispanConstants.KEY).constant(time_key)
             .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_time)
-            .to("infinispan://mycache?hosts=infinispan&username=admin&password=password")
+            .to("infinispan:mycache")
             .process(exchange -> {
                 time_value =  (String) exchange.getMessage().getBody();
             });
@@ -66,7 +66,7 @@ public class EdgeRoute extends RouteBuilder {
             .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
             .setHeader(InfinispanConstants.KEY).constant("old_time")
             .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_time)
-            .to("infinispan://mycache?hosts=infinispan&username=admin&password=password")
+            .to("infinispan:mycache")
             .process(exchange -> {
                 old_time =  (Long) exchange.getMessage().getBody();
             });    
@@ -76,7 +76,7 @@ public class EdgeRoute extends RouteBuilder {
             .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
             .setHeader(InfinispanConstants.KEY).constant("old_counter")
             .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_counter)
-            .to("infinispan://mycache?hosts=infinispan&username=admin&password=password")
+            .to("infinispan:mycache")
             .process(exchange -> {
                 old_counter =  (Integer) exchange.getMessage().getBody();
             });
@@ -86,7 +86,7 @@ public class EdgeRoute extends RouteBuilder {
             .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
             .setHeader(InfinispanConstants.KEY).constant(counter_key)
             .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_counter)
-            .to("infinispan://mycache?hosts=infinispan&username=admin&password=password")
+            .to("infinispan:mycache")
             .process(exchange -> {
                 counter_value =  (String) exchange.getMessage().getBody();
             });

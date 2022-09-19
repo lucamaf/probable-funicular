@@ -1,9 +1,9 @@
 # Edge Open Demo Project
 
 ## Edge Gateway (based on RHEL with Microshift preinstalled)
-To use the prebuilt image, create a VM using the provided ISO as installation disk found [here](ftp://ftpuser@65.21.88.32/aaf08b97-d2fd-4ba4-8729-048c24edd7e3-installer.iso)  
+To use the prebuilt image, create a VM using the provided ISO as installation disk found [ftp link](https://bit.ly/3Bo6occ)  
 As operating system select RHEL8.6, create a VM with the disk image as the ISO and make sure to select EUFI as boot loader, provide at least 4GB of RAM and choose automatic partioning  
-Username and password of are *admin:password*  
+Username and password of default admin user are *admin:password*  
 After the installation Microshift should be running already, you can check with:
 ```
 systemctl status microshift
