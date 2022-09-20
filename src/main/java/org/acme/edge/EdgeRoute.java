@@ -122,7 +122,7 @@ public class EdgeRoute extends RouteBuilder {
             .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.PUT)
             .setHeader(InfinispanConstants.KEY).constant(time_key)
             .setHeader(InfinispanConstants.VALUE).body()
-            .to("infinispan://mycache?hosts=infinispan&username=admin&password=password");
+            .to("infinispan:mycache");
 
         // processing counter updates (long and short running)
         from("direct:counter")
@@ -136,7 +136,7 @@ public class EdgeRoute extends RouteBuilder {
         .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.PUT)
         .setHeader(InfinispanConstants.KEY).constant(time_key)
         .setHeader(InfinispanConstants.VALUE).body()
-        .to("infinispan://mycache?hosts=infinispan&username=admin&password=password")
+        .to("infinispan:mycache")
         .to("direct:check");
 
         // get counter value from infinispan
@@ -145,7 +145,7 @@ public class EdgeRoute extends RouteBuilder {
         .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
             .setHeader(InfinispanConstants.KEY).constant("old_counter")
             .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_counter)
-            .to("infinispan://mycache?hosts=infinispan&username=admin&password=password")
+            .to("infinispan:mycache")
         
         //.marshal().json()
         //.process(exchange -> {

@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: artemis
+spec:
+  selector:
+    matchLabels:
+      app: artemis # has to match .spec.template.metadata.labels
+  serviceName: "artemis"
+  replicas: 1 # by default is 1
+  template:
+    metadata:
+      labels:
+        app: artemis # has to match .spec.selector.matchLabels
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: artemis
+        image: qoricode/activemq-artemis
+        ports:
+        - containerPort: 8161
+          name: web
+        - containerPort: 61616
+          name: all
+        - containerPort: 9404
+          name: metrics
+        - containerPort: 5672
+          name: amqp
+        - containerPort: 1883
+          name: mqtt
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/artemis-instance
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "kubevirt-hostpath-provisioner"
+      resources:
+        requests:
+                storage: 5Gi

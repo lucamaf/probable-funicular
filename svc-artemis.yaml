@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: artemis
+  labels:
+    app: artemis
+spec:
+  type: NodePort
+  ports:
+  - port: 8161
+    name: web
+    targetPort: 8161
+    nodePort: 31161
+  - port: 61616
+    name: all
+    targetPort: 61616
+    nodePort: 31616
+  - port: 9404
+    name: metrics
+    targetPort: 9404
+    nodePort: 31404
+  - port: 5672
+    name: amqp
+    targetPort: 5672
+    nodePort: 31672
+  - port: 1883
+    name: mqtt
+    targetPort: 1883
+    nodePort: 31883
+  selector:
+    app: artemis

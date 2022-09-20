@@ -20,6 +20,45 @@ sudo cat /var/lib/microshift/resources/kubeadmin/kubeconfig > ~/.kube/config
 ```
 Now you should be able to access the microshift cluster
 
+## MQTT Broker
+The broker is based on Apache Artemis MQ [project](https://activemq.apache.org/components/artemis/)  
+We will be using this qoricode/activemq-artemis image to create a [statefulset](ss-artemis.yaml) and [service](svc-artemis.yaml)  
+By default persistence is enabled and all protocol ports are exposed (port 8161 dedicated to web console and port 1883 dedicated to mqtt protocol)  
+Username and password to access the web console are _artemis:simetraehcapa_
+
+## Sample data from the sensor
+To test the full flow you can append the following payload to the topic previosuly created (and configured on quarkus app)  
+```json
+{
+    "sensor":"truck1",
+    "pressure":1007.05,
+    "temperature":28.60751343,
+    "humidity":51.09419632,
+    "gas_resistance":7.362,
+    "altitude":51.83121109,
+    "gps":[48.75608,2.302038],
+    "CO2":421,
+    "ppm":3
+}
+```
+
+## Data caching
+For persisting partial results (and state in case of failure) we will be using [Infinispan](https://infinispan.org/get-started/)  
+We will be installing it using [Helm charts](https://infinispan.org/docs/helm-chart/main/helm-chart.html#installing-chart-command-line_install)  
+You can find the chart values [here](infinispan-values.yaml)  
+```
+helm install infinispan -n default openshift-helm-charts/infinispan-infinispan --values infinispan-values.yaml
+```
+
+## Geo query
+For the geo query functionality we are going to rely on [Redis](https://redis.io/commands/geosearch/)  
+We will install the component using Helm charts with the following parameters:  
+
+```
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
+helm install my-redis -n default --set auth.password=password --set master.persistence.storageClass=kubevirt-hostpath-provisioner --set architecture=standalone --set replica.replicaCount=0 --set metrics.enabled=true bitnami/redis
+```
 
 ## Running the application in dev mode
 
