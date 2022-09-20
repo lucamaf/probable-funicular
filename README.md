@@ -20,6 +20,10 @@ sudo cat /var/lib/microshift/resources/kubeadmin/kubeconfig > ~/.kube/config
 ```
 Now you should be able to access the microshift cluster
 
+## OKD console on Microshift
+If you don't like the standard k8s dashboard you can also deploy the OKD console (v4) on top of it as shown [here](https://community.ibm.com/community/user/cloud/blogs/alexei-karve/2021/11/23/microshift-1)  
+and then access the console at http://localhost:30036/dashboards  
+
 ## MQTT Broker
 The broker is based on Apache Artemis MQ [project](https://activemq.apache.org/components/artemis/)  
 We will be using this qoricode/activemq-artemis image to create a [statefulset](ss-artemis.yaml) and [service](svc-artemis.yaml)
@@ -80,7 +84,7 @@ _whenever you update the image and want to redeploy the application to use the l
 ```
 kubectl rollout restart deployment your_deployment_name
 ```
-
+----------------------------------------
 
 ## Running the application in dev mode
 
