@@ -52,7 +52,7 @@ public class EdgeRoute extends RouteBuilder {
         // when temperature out of range and humidity as well
         // store JMSTimestamp, temp and humidity values in infinispan under predefined keys 
         // if new timestamp is greater than current timestamp by a period reset timestamp and reset to one the counter
-        // otherwise increment one the key
+        // otherwise increment by one the key
         // when counter reaches limit send an alert to email address (if connection fails retry)
         // when the counter reached double the amount perform a geo query on redis and trigger the alert on telegram to deliver the good
     @Override
@@ -172,15 +172,12 @@ public class EdgeRoute extends RouteBuilder {
 
         //.marshal().json()
         .choice()
-            //.when(PredicateBuilder.isGreaterThan(
-            //    ExpressionBuilder.languageExpression("jsonpath", "$.counter"), 
-            //    ExpressionBuilder.constantExpression("0")))
-            //    .log("watchout");
             //.when().jsonpath("$[?(@.counter>{{counter.limit}})]")
             .when(simple("${body} > {{counter.limit}}"))
                 .log("watchout")
                 .setBody(simple("Alert! {{counter.limit}} times exceeded range temperature"))
-                .to("https://{{alert.endpoint}}");
+                .to("smtp://{{smtp.host}}?from={{smtp.from}}&contentType=text/enriched");
+                //.to("https://{{alert.endpoint}}");
         
 
     }

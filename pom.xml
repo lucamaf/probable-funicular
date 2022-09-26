@@ -73,8 +73,8 @@
     </dependency>
     <dependency>
       <groupId>org.apache.camel.quarkus</groupId>
-      <artifactId>camel-quarkus-jsonpath</artifactId>
-    </dependency>
+      <artifactId>camel-quarkus-mail</artifactId>
+  </dependency>
     <dependency>
       <groupId>org.amqphub.quarkus</groupId>
       <artifactId>quarkus-qpid-jms</artifactId>
