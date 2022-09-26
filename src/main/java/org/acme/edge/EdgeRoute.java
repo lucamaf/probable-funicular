@@ -17,6 +17,7 @@
 package org.acme.edge;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 
 import org.apache.camel.builder.RouteBuilder;
 //import org.apache.camel.component.couchdb.CouchDbConstants;
@@ -25,19 +26,24 @@ import org.apache.camel.component.infinispan.InfinispanOperation;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
 
 @ApplicationScoped
 public class EdgeRoute extends RouteBuilder {
 
-    JacksonDataFormat jsonDataFormat = new JacksonDataFormat(Msg.class);
-    private long old_time=System.currentTimeMillis();
-    private int old_counter=0;
+    @Inject
+    ObjectMapper mapper;    
+    
+    private long long_time=System.currentTimeMillis();
+    private int long_counter=0;
     private String time_key="time";
+    private String long_time_key="long_time";
     private String counter_key="counter";
+    private String long_counter_key="long_counter";
     private String total_key= "hour";
-    private String time_value="";
-    private String counter_value="";
+    private long time_value= 0;
+    private int counter_value= 0;
     private int total_value=0;
 
     @ConfigProperty(name = "time.range") 
@@ -51,44 +57,51 @@ public class EdgeRoute extends RouteBuilder {
         // when the counter reached double the amount perform a geo query on redis and trigger the alert on telegram to deliver the good
     @Override
     public void configure() throws Exception {
+        JacksonDataFormat jsonDataFormat = new JacksonDataFormat(Msg.class);
+        jsonDataFormat.setObjectMapper(mapper);
+        
         // get last saved time value
         from("timer://runOnce?repeatCount=1")
+            .routeId("initTimer")
             .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
             .setHeader(InfinispanConstants.KEY).constant(time_key)
-            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_time)
+            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(long_time)
             .to("infinispan:mycache")
             .process(exchange -> {
-                time_value =  (String) exchange.getMessage().getBody();
+                time_value =  (long) exchange.getMessage().getBody();
             });
 
         // get the long running timer
         from("timer://runOnce?repeatCount=1")
+            .routeId("initLongTimer")
             .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
-            .setHeader(InfinispanConstants.KEY).constant("old_time")
-            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_time)
+            .setHeader(InfinispanConstants.KEY).constant(long_time_key)
+            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(long_time)
             .to("infinispan:mycache")
             .process(exchange -> {
-                old_time =  (Long) exchange.getMessage().getBody();
+                long_time =  (long) exchange.getMessage().getBody();
             });    
 
         // get the long running counter
         from("timer://runOnce?repeatCount=1")
+            .routeId("initLongCounter")
             .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
-            .setHeader(InfinispanConstants.KEY).constant("old_counter")
-            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_counter)
+            .setHeader(InfinispanConstants.KEY).constant(long_counter_key)
+            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(long_counter)
             .to("infinispan:mycache")
             .process(exchange -> {
-                old_counter =  (Integer) exchange.getMessage().getBody();
+                long_counter =  (Integer) exchange.getMessage().getBody();
             });
 
         // get last saved counter value
         from("timer://runOnce?repeatCount=1")
+            .routeId("initCounter")
             .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
             .setHeader(InfinispanConstants.KEY).constant(counter_key)
-            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_counter)
+            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(long_counter)
             .to("infinispan:mycache")
             .process(exchange -> {
-                counter_value =  (String) exchange.getMessage().getBody();
+                counter_value =  (int) exchange.getMessage().getBody();
             });
 
         // check for temperature or humidity limits
@@ -113,9 +126,9 @@ public class EdgeRoute extends RouteBuilder {
             .process(exchange -> {
                 long t = (long) exchange.getMessage().getHeader("JMSTimestamp");
             
-                if(t - Long.parseLong(time_value) >  timerange){
-                    old_counter=0;
-                    old_time=t;
+                if(t - time_value >  timerange){
+                    long_counter=0;
+                    long_time=t;
                 }
                 exchange.getMessage().setBody(t);
             })
@@ -129,12 +142,12 @@ public class EdgeRoute extends RouteBuilder {
         .routeId("infinispan-counter")
         .process(exchange -> {
             
-            old_counter += 1;
+            long_counter += 1;
             counter_value += 1;
-            exchange.getMessage().setBody(old_counter);
+            exchange.getMessage().setBody(long_counter);
         })
         .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.PUT)
-        .setHeader(InfinispanConstants.KEY).constant(time_key)
+        .setHeader(InfinispanConstants.KEY).constant(counter_key)
         .setHeader(InfinispanConstants.VALUE).body()
         .to("infinispan:mycache")
         .to("direct:check");
@@ -143,8 +156,8 @@ public class EdgeRoute extends RouteBuilder {
         from("direct:check")
         .routeId("checkLimit")
         .setHeader(InfinispanConstants.OPERATION).constant(InfinispanOperation.GETORDEFAULT)
-            .setHeader(InfinispanConstants.KEY).constant("old_counter")
-            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(old_counter)
+            .setHeader(InfinispanConstants.KEY).constant(counter_key)
+            .setHeader(InfinispanConstants.DEFAULT_VALUE).constant(counter_value)
             .to("infinispan:mycache")
         
         //.marshal().json()
@@ -163,7 +176,8 @@ public class EdgeRoute extends RouteBuilder {
             //    ExpressionBuilder.languageExpression("jsonpath", "$.counter"), 
             //    ExpressionBuilder.constantExpression("0")))
             //    .log("watchout");
-            .when().jsonpath("$[?(@.counter>{{counter.limit}})]")
+            //.when().jsonpath("$[?(@.counter>{{counter.limit}})]")
+            .when(simple("${body} > {{counter.limit}}"))
                 .log("watchout")
                 .setBody(simple("Alert! {{counter.limit}} times exceeded range temperature"))
                 .to("https://{{alert.endpoint}}");

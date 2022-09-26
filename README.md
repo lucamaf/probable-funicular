@@ -1,7 +1,7 @@
 # Edge Open Demo Project
 
 ## Edge Gateway (based on RHEL with Microshift preinstalled)
-To use the prebuilt image, create a VM using the provided ISO as installation disk found [ftp link](https://bit.ly/3Bo6occ)  
+To use the prebuilt image, create a VM using the provided ISO as installation disk found [ftp link](https://bit.ly/3Bo6occ)[¹]  
 As operating system select RHEL8.6, create a VM with the disk image as the ISO and make sure to select EUFI as boot loader, provide at least 4GB of RAM and choose automatic partioning  
 Username and password of default admin user are *admin:password*  
 After the installation Microshift should be running already, you can check with:
@@ -18,11 +18,20 @@ and copy the kubeconfig file:
 mkdir ~/.kube
 sudo cat /var/lib/microshift/resources/kubeadmin/kubeconfig > ~/.kube/config
 ```
-Now you should be able to access the microshift cluster
+Now you should be able to access the microshift cluster.
+
+[¹]: need a wget to resolve the actual link
 
 ## OKD console on Microshift
 If you don't like the standard k8s dashboard you can also deploy the OKD console (v4) on top of it as shown [here](https://community.ibm.com/community/user/cloud/blogs/alexei-karve/2021/11/23/microshift-1)  
 and then access the console at http://localhost:30036/dashboards  
+
+## Remote access to Microshift
+First of all, make sure you opened port 6443 on the firewall of the Edge device to allow external access  
+
+## Deploy Flotta to manage workloads on Microshift
+https://project-flotta.io/documentation/v0_2_0/gsg/ocp.html
+
 
 ## MQTT Broker
 The broker is based on Apache Artemis MQ [project](https://activemq.apache.org/components/artemis/)  
@@ -71,12 +80,12 @@ To test the full flow you can append the following payload to the topic previosu
 ```
 
 ## Packaging and running the application on Microshift
-Since Microshift is not exposed by default outside the Edge network we would need a 2 steps approach to deploy the Quarkus application on it: 
+Since Microshift is not implementing Build or BuildConfig OpenShift APIs, we would need a 2 steps approach to deploy the Quarkus application on it: 
 1. build the container image and push it to Quay (as configured inside the application.properties file)
    ```
    mvn clean package -DskipTests -Dquarkus.container-image.push=true -Dquarkus.container-image.password=<your_quay_password>
    ```
-2. copy the generated k8s deployment [artifact](target/kubernetes/kubernetes.yml) to the Edge device and  
+2. use the generated k8s deployment [artifact](target/kubernetes/kubernetes.yml) and create the deployment, while connected to the Edge device  
    ```
    kubectl create -f kubernetes.yml
    ```
