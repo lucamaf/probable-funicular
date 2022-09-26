@@ -176,7 +176,7 @@ public class EdgeRoute extends RouteBuilder {
             .when(simple("${body} > {{counter.limit}}"))
                 .log("watchout")
                 .setBody(simple("Alert! {{counter.limit}} times exceeded range temperature"))
-                .to("smtp://{{smtp.host}}?from={{smtp.from}}&contentType=text/enriched");
+                .to("smtp://{{smtp.host}}?from={{smtp.from}}&to={{smtp.to}}&subject={{smtp.subject}}&contentType=text/enriched");
                 //.to("https://{{alert.endpoint}}");
         
 
