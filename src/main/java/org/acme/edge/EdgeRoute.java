@@ -177,7 +177,7 @@ public class EdgeRoute extends RouteBuilder {
                 .log(" >>> Watchout: tier 2 !!! ")
                 .log(" >>> Sending telegram notification")
                 .setBody(simple("Alert!!! {{counter.maxlimit}} times exceeded range temperature or humidity"))
-                .to("telegram:bots?authorizationToken=5423964667:AAGH2TmPnljRxOOw8joPVuLvewypFtmOIA4&chatId=-866936365")
+                .to("telegram:bots?authorizationToken={{telegram.token}}&chatId=-866936365")
             .when(simple("${body} > {{counter.limit}}"))
                 .log(" >> Watchout: tier 1 !")
                 .log(" >> Sending email notification")
