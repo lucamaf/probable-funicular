@@ -27,7 +27,7 @@ import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.JsonObject;
+//import com.google.gson.JsonObject;
 
 @ApplicationScoped
 public class EdgeRoute extends RouteBuilder {
@@ -182,9 +182,8 @@ public class EdgeRoute extends RouteBuilder {
                 .log(" >> Watchout: tier 1 !")
                 .log(" >> Sending email notification")
                 .setBody(simple("Alert! {{counter.limit}} times exceeded range temperature or humidity"))
-                .to("smtp://{{smtp.host}}?from={{smtp.from}}&to={{smtp.to}}&subject={{smtp.subject}}&contentType=text/enriched")
+                .to("smtp://{{smtp.host}}?from={{smtp.from}}&to={{smtp.to}}&subject={{smtp.subject}}&contentType=text/enriched");
                 //.to("https://{{alert.endpoint}}");
-            ;
 
     }
 }

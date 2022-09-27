@@ -61,7 +61,8 @@ We will install the component using Helm charts with the following parameters:
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo update
 helm install my-redis -n default --set auth.password=password --set master.persistence.storageClass=kubevirt-hostpath-provisioner --set architecture=standalone --set replica.replicaCount=0 --set metrics.enabled=true bitnami/redis
-```
+```   
+If you want to connect from outside make sure to expose redis svc as NodePort   
 
 ## Sample data from the sensor
 To test the full flow you can append the following payload to the topic previosuly created (and configured on quarkus app)  
@@ -97,6 +98,7 @@ kubectl rollout restart deployment your_deployment_name
 ## Testing the application workflow
 Send the above JSON payload at least 6 times and it should trigger the first level alerting (remember to click on profile inside artemis console before trying to send a message to authorize the console user)  
 Head to the [test mail server](https://www.wpoven.com/tools/free-smtp-server-for-testing) and search for luca@example.com and you should see the alert email  
+Create a telegram bot and retrieve the authorization token, then create a public chat group with the bot and identify the *chat_id* of the group that will be used for telegram notifications (you can call the following api to retrieve the chat_id: https://api.telegram.org/botXXX:YYYY/getUpdates)  
 
 ----------------------------------------
 
