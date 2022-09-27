@@ -173,12 +173,18 @@ public class EdgeRoute extends RouteBuilder {
         //.marshal().json()
         .choice()
             //.when().jsonpath("$[?(@.counter>{{counter.limit}})]")
+            .when(simple("${body} > {{counter.maxlimit}}"))
+                .log(" >>> Watchout: tier 2 !!! ")
+                .log(" >>> Sending telegram notification")
+                .setBody(simple("Alert!!! {{counter.maxlimit}} times exceeded range temperature or humidity"))
+                .to("telegram:bots?authorizationToken=5423964667:AAGH2TmPnljRxOOw8joPVuLvewypFtmOIA4&chatId=-866936365")
             .when(simple("${body} > {{counter.limit}}"))
-                .log("watchout")
-                .setBody(simple("Alert! {{counter.limit}} times exceeded range temperature"))
-                .to("smtp://{{smtp.host}}?from={{smtp.from}}&to={{smtp.to}}&subject={{smtp.subject}}&contentType=text/enriched");
+                .log(" >> Watchout: tier 1 !")
+                .log(" >> Sending email notification")
+                .setBody(simple("Alert! {{counter.limit}} times exceeded range temperature or humidity"))
+                .to("smtp://{{smtp.host}}?from={{smtp.from}}&to={{smtp.to}}&subject={{smtp.subject}}&contentType=text/enriched")
                 //.to("https://{{alert.endpoint}}");
-        
+            ;
 
     }
 }

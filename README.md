@@ -93,6 +93,11 @@ _whenever you update the image and want to redeploy the application to use the l
 ```
 kubectl rollout restart deployment your_deployment_name
 ```
+
+## Testing the application workflow
+Send the above JSON payload at least 6 times and it should trigger the first level alerting (remember to click on profile inside artemis console before trying to send a message to authorize the console user)  
+Head to the [test mail server](https://www.wpoven.com/tools/free-smtp-server-for-testing) and search for luca@example.com and you should see the alert email  
+
 ----------------------------------------
 
 ## Running the application in dev mode
